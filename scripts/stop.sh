@@ -17,6 +17,18 @@ else
   exit 1
 fi
 
-"${COMPOSE_CMD[@]}" down
+ENV_FILE="${KANBAN_ENV_FILE:-$HOME/.config/kanban/kanban.secrets.env}"
+if [ ! -f "$ENV_FILE" ] && [ -f "./secrets/kanban.secrets.env" ]; then
+  ENV_FILE="./secrets/kanban.secrets.env"
+fi
+
+if [ ! -f "$ENV_FILE" ]; then
+  echo "Missing secrets env file."
+  echo "Expected at: $HOME/.config/kanban/kanban.secrets.env"
+  echo "Or set KANBAN_ENV_FILE to a different path."
+  exit 1
+fi
+
+"${COMPOSE_CMD[@]}" --env-file "$ENV_FILE" down
 
 echo "Stopped Docker Compose services"
