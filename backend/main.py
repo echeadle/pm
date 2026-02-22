@@ -22,8 +22,15 @@ STATIC_DIR = BASE_DIR / "static"
 DEFAULT_DATABASE_URL = "postgresql://pm_user:pm_password@db:5432/pm_db"
 SESSION_COOKIE_NAME = "pm_session"
 SESSION_COOKIE_VALUE = "mvp-user-session"
-MVP_USERNAME = "user"
-MVP_PASSWORD = "password"
+
+
+def _get_mvp_credentials() -> tuple[str, str]:
+    username = os.getenv("MVP_USERNAME", "user")
+    password = os.getenv("MVP_PASSWORD", "password")
+    return username, password
+
+
+MVP_USERNAME, MVP_PASSWORD = _get_mvp_credentials()
 CANONICAL_COLUMNS = [
     ("col-backlog", "Backlog"),
     ("col-discovery", "Discovery"),
@@ -148,7 +155,11 @@ def _normalize_board_payload(board: dict) -> dict:
     for column_id, default_title in CANONICAL_COLUMNS:
         source = by_id.get(column_id, {})
         source_title = source.get("title") if isinstance(source, dict) else None
-        title = source_title if isinstance(source_title, str) and source_title else default_title
+        title = (
+            source_title
+            if isinstance(source_title, str) and source_title
+            else default_title
+        )
         source_cards = source.get("cards") if isinstance(source, dict) else []
 
         cards: list[dict] = []
@@ -253,8 +264,12 @@ def _ai_error_response(exc: Exception) -> JSONResponse:
     if isinstance(exc, RuntimeError):
         message = str(exc).lower()
         if "valid json" in message:
-            return JSONResponse({"error": "AI response was not valid JSON"}, status_code=502)
-        return JSONResponse({"error": f"AI provider request failed: {str(exc)}"}, status_code=502)
+            return JSONResponse(
+                {"error": "AI response was not valid JSON"}, status_code=502
+            )
+        return JSONResponse(
+            {"error": f"AI provider request failed: {str(exc)}"}, status_code=502
+        )
     if isinstance(exc, APIStatusError):
         status = getattr(exc, "status_code", 502) or 502
         return JSONResponse(
@@ -416,7 +431,11 @@ def ai_chat(request: Request, payload: ChatRequest):
     board_update_raw = raw_response.get("board_update")
     if board_update_raw is None:
         return JSONResponse(
-            {"assistant_message": assistant_message, "board_update": None, "model": AI_MODEL}
+            {
+                "assistant_message": assistant_message,
+                "board_update": None,
+                "model": AI_MODEL,
+            }
         )
 
     try:
