@@ -11,6 +11,7 @@ import {
   rectIntersection,
   type CollisionDetection,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/KanbanColumn";
@@ -227,6 +228,46 @@ export const KanbanBoard = ({ rightSidebar }: KanbanBoardProps) => {
     setActiveCardId(event.active.id as string);
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    setBoard((prev) => {
+      const activeId = active.id as string;
+      const overId = over.id as string;
+
+      const sourceCol = prev.columns.find((c) => c.cardIds.includes(activeId));
+      const isOverColumn = prev.columns.some((c) => c.id === overId);
+      const destCol = isOverColumn
+        ? prev.columns.find((c) => c.id === overId)
+        : prev.columns.find((c) => c.cardIds.includes(overId));
+
+      if (!sourceCol || !destCol || sourceCol.id === destCol.id) {
+        return prev;
+      }
+
+      const nextSourceCards = sourceCol.cardIds.filter((id) => id !== activeId);
+      const nextDestCards = [...destCol.cardIds];
+      if (isOverColumn) {
+        nextDestCards.push(activeId);
+      } else {
+        const overIndex = destCol.cardIds.indexOf(overId);
+        nextDestCards.splice(overIndex >= 0 ? overIndex : nextDestCards.length, 0, activeId);
+      }
+
+      return {
+        ...prev,
+        columns: prev.columns.map((col) => {
+          if (col.id === sourceCol.id) return { ...col, cardIds: nextSourceCards };
+          if (col.id === destCol.id) return { ...col, cardIds: nextDestCards };
+          return col;
+        }),
+      };
+    });
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveCardId(null);
@@ -346,6 +387,7 @@ export const KanbanBoard = ({ rightSidebar }: KanbanBoardProps) => {
             sensors={sensors}
             collisionDetection={collisionDetectionStrategy}
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
             <section className="grid gap-6 lg:grid-cols-5">

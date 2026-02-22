@@ -107,17 +107,6 @@ export default function Home() {
       }
 
       if (body.board_update) {
-        const persist = await fetch("/api/kanban", {
-          method: "PUT",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body.board_update),
-        });
-
-        if (!persist.ok) {
-          throw new Error("Failed to persist AI board update");
-        }
-
         window.dispatchEvent(
           new CustomEvent("kanban:apply-board-update", { detail: body.board_update })
         );
