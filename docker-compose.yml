@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pm-db
+    environment:
+      POSTGRES_DB: pm_db
+      POSTGRES_USER: pm_user
+      POSTGRES_PASSWORD: pm_password
+    volumes:
+      - pm_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pm_user -d pm_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pm-web
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://pm_user:pm_password@db:5432/pm_db
+      OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
+    ports:
+      - "8000:8000"
+    secrets:
+      - source: openai_api_key
+        target: openai_api_key
+
+volumes:
+  pm_postgres_data:
+
+secrets:
+  openai_api_key:
+    file: ${OPENAI_API_KEY_SECRET_FILE:-./secrets/openai_api_key.txt}
