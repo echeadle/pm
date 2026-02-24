@@ -3,7 +3,13 @@ import userEvent from "@testing-library/user-event";
 import Home from "@/app/page";
 
 vi.mock("@/components/KanbanBoard", () => ({
-  KanbanBoard: () => <div>Kanban Board Mock</div>,
+  KanbanBoard: ({ headerActions, rightSidebar }: { headerActions?: React.ReactNode; rightSidebar?: React.ReactNode }) => (
+    <div>
+      Kanban Board Mock
+      {headerActions}
+      {rightSidebar}
+    </div>
+  ),
 }));
 
 type MockResponse = {

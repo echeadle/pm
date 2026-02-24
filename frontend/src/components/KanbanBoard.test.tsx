@@ -35,7 +35,7 @@ describe("KanbanBoard", () => {
     render(<KanbanBoard />);
     await screen.findByTestId("column-col-backlog");
     await waitFor(() => {
-      expect(screen.queryByText(/loading board/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^loading\.\.\.$/i)).not.toBeInTheDocument();
     });
   };
 
@@ -57,7 +57,7 @@ describe("KanbanBoard", () => {
     await renderBoard();
     const column = getFirstColumn();
     const addButton = within(column).getByRole("button", {
-      name: /add a card/i,
+      name: /add card/i,
     });
     await userEvent.click(addButton);
 
@@ -66,7 +66,7 @@ describe("KanbanBoard", () => {
     const detailsInput = within(column).getByPlaceholderText(/details/i);
     await userEvent.type(detailsInput, "Notes");
 
-    await userEvent.click(within(column).getByRole("button", { name: /add card/i }));
+    await userEvent.click(within(column).getByRole("button", { name: /^add$/i }));
 
     expect(within(column).getByText("New card")).toBeInTheDocument();
 
