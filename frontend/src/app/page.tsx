@@ -85,10 +85,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: trimmed,
-          history: chatMessages.map((message) => ({
-            role: message.role,
-            content: message.content,
-          })),
+          history: chatMessages,
         }),
       });
 
@@ -103,7 +100,7 @@ export default function Home() {
       if (typeof body.assistant_message === "string") {
         setChatMessages((prev) => [
           ...prev,
-          { role: "assistant", content: body.assistant_message as string },
+          { role: "assistant", content: body.assistant_message },
         ]);
       }
 

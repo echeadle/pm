@@ -3,7 +3,7 @@ import time
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List, Literal
+from typing import Literal
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,11 +54,11 @@ class BoardCard(BaseModel):
 class BoardColumn(BaseModel):
     id: str
     title: str
-    cards: List[BoardCard]
+    cards: list[BoardCard]
 
 
 class BoardBody(BaseModel):
-    columns: List[BoardColumn]
+    columns: list[BoardColumn]
 
 
 class BoardPayload(BaseModel):
@@ -73,7 +73,7 @@ class ChatHistoryMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    history: List[ChatHistoryMessage] = Field(default_factory=list)
+    history: list[ChatHistoryMessage] = Field(default_factory=list)
 
 
 def get_database_url() -> str:
@@ -154,13 +154,13 @@ def _normalize_board_payload(board: dict) -> dict:
 
     for column_id, default_title in CANONICAL_COLUMNS:
         source = by_id.get(column_id, {})
-        source_title = source.get("title") if isinstance(source, dict) else None
+        source_title = source.get("title")
         title = (
             source_title
             if isinstance(source_title, str) and source_title
             else default_title
         )
-        source_cards = source.get("cards") if isinstance(source, dict) else []
+        source_cards = source.get("cards", [])
 
         cards: list[dict] = []
         if isinstance(source_cards, list):
@@ -308,7 +308,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-# Enable CORS for local development (allow frontend dev server)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:3000", "http://localhost:3000"],

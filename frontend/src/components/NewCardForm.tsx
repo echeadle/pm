@@ -6,11 +6,11 @@ type NewCardFormProps = {
   onAdd: (title: string, details: string) => void;
 };
 
-export const NewCardForm = ({ onAdd }: NewCardFormProps) => {
+export function NewCardForm({ onAdd }: NewCardFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [formState, setFormState] = useState(initialFormState);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!formState.title.trim()) {
       return;
@@ -18,7 +18,7 @@ export const NewCardForm = ({ onAdd }: NewCardFormProps) => {
     onAdd(formState.title.trim(), formState.details.trim());
     setFormState(initialFormState);
     setIsOpen(false);
-  };
+  }
 
   return (
     <div className="mt-4">
@@ -74,4 +74,4 @@ export const NewCardForm = ({ onAdd }: NewCardFormProps) => {
       )}
     </div>
   );
-};
+}

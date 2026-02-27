@@ -71,21 +71,22 @@ export const initialData: BoardData = {
   },
 };
 
-const isColumnId = (columns: Column[], id: string) =>
-  columns.some((column) => column.id === id);
+function isColumnId(columns: Column[], id: string) {
+  return columns.some((column) => column.id === id);
+}
 
-const findColumnId = (columns: Column[], id: string) => {
+function findColumnId(columns: Column[], id: string) {
   if (isColumnId(columns, id)) {
     return id;
   }
   return columns.find((column) => column.cardIds.includes(id))?.id;
-};
+}
 
-export const moveCard = (
+export function moveCard(
   columns: Column[],
   activeId: string,
   overId: string
-): Column[] => {
+): Column[] {
   const activeColumnId = findColumnId(columns, activeId);
   const overColumnId = findColumnId(columns, overId);
 
@@ -159,10 +160,10 @@ export const moveCard = (
     }
     return column;
   });
-};
+}
 
-export const createId = (prefix: string) => {
+export function createId(prefix: string) {
   const randomPart = Math.random().toString(36).slice(2, 8);
   const timePart = Date.now().toString(36);
   return `${prefix}-${randomPart}${timePart}`;
-};
+}

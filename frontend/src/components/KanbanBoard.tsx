@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useMemo, useState, useEffect, useRef } from "react";
+import { type ReactNode, useState, useEffect, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -16,28 +16,20 @@ import {
 } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
-import { createId, initialData, moveCard, type BoardData } from "@/lib/kanban";
-
-type ApiCard = {
-  id: string;
-  title: string;
-  details: string;
-};
-
-type ApiColumn = {
-  id: string;
-  title: string;
-  cards: ApiCard[];
-};
+import { createId, initialData, moveCard, type BoardData, type Card } from "@/lib/kanban";
 
 type ApiBoardPayload = {
   version: 1;
   board: {
-    columns: ApiColumn[];
+    columns: {
+      id: string;
+      title: string;
+      cards: Card[];
+    }[];
   };
 };
 
-const normalizeBoard = (data: unknown): BoardData | null => {
+function normalizeBoard(data: unknown): BoardData | null {
   if (
     !data ||
     typeof data !== "object" ||
@@ -50,57 +42,52 @@ const normalizeBoard = (data: unknown): BoardData | null => {
     return null;
   }
 
-  const columns = data.board.columns.map((col: any) => ({
-    id: col.id,
-    title: col.title,
-    cardIds: Array.isArray(col.cards) ? col.cards.map((c: any) => c.id) : [],
-  }));
-
-  const cards: Record<string, ApiCard> = {};
-  data.board.columns.forEach((col: any) => {
-    if (!Array.isArray(col.cards)) {
-      return;
-    }
-
-    col.cards.forEach((card: any) => {
-      if (!card || !card.id) {
-        return;
+  const cards: Record<string, Card> = {};
+  const columns = data.board.columns.map((col: any) => {
+    const cardIds: string[] = [];
+    if (Array.isArray(col.cards)) {
+      for (const card of col.cards) {
+        if (!card || !card.id) continue;
+        cards[card.id] = {
+          id: card.id,
+          title: card.title || "",
+          details: card.details || "",
+        };
+        cardIds.push(card.id);
       }
-      cards[card.id] = {
-        id: card.id,
-        title: card.title || "",
-        details: card.details || "",
-      };
-    });
+    }
+    return { id: col.id, title: col.title, cardIds };
   });
 
   return { columns, cards };
-};
+}
 
-const serializeBoard = (board: BoardData): ApiBoardPayload => ({
-  version: 1,
-  board: {
-    columns: board.columns.map((column) => ({
-      id: column.id,
-      title: column.title,
-      cards: column.cardIds
-        .map((cardId) => board.cards[cardId])
-        .filter(Boolean)
-        .map((card) => ({
-          id: card.id,
-          title: card.title,
-          details: card.details,
-        })),
-    })),
-  },
-});
+function serializeBoard(board: BoardData): ApiBoardPayload {
+  return {
+    version: 1,
+    board: {
+      columns: board.columns.map((column) => ({
+        id: column.id,
+        title: column.title,
+        cards: column.cardIds
+          .map((cardId) => board.cards[cardId])
+          .filter(Boolean)
+          .map((card) => ({
+            id: card.id,
+            title: card.title,
+            details: card.details,
+          })),
+      })),
+    },
+  };
+}
 
 type KanbanBoardProps = {
   rightSidebar?: ReactNode;
   headerActions?: ReactNode;
 };
 
-export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) => {
+export function KanbanBoard({ rightSidebar, headerActions }: KanbanBoardProps) {
   const [board, setBoard] = useState<BoardData>(() => initialData);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -111,16 +98,16 @@ export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) =
   useEffect(() => {
     let mounted = true;
 
-    const tryFetch = async () => {
+    async function fetchBoard() {
       try {
         setIsLoading(true);
         setLoadError(null);
-        const r = await fetch("/api/kanban", { credentials: "include" });
-        if (!r.ok) {
+        const response = await fetch("/api/kanban", { credentials: "include" });
+        if (!response.ok) {
           throw new Error("Failed to load board");
         }
 
-        const json = await r.json();
+        const json = await response.json();
         const normalized = normalizeBoard(json);
         if (!normalized) {
           throw new Error("Invalid board payload");
@@ -140,7 +127,7 @@ export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) =
       }
     };
 
-    void tryFetch();
+    void fetchBoard();
 
     return () => {
       mounted = false;
@@ -162,6 +149,7 @@ export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) =
       window.removeEventListener("kanban:apply-board-update", handleApplyBoardUpdate);
     };
   }, []);
+
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -178,13 +166,11 @@ export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) =
     return rectIntersection(args);
   };
 
-  const cardsById = useMemo(() => board.cards, [board.cards]);
-
-  const persistBoard = async (
+  async function persistBoard(
     nextBoard: BoardData,
     previousBoard: BoardData,
     mutationId: number
-  ) => {
+  ) {
     setIsSaving(true);
     setSaveError(null);
 
@@ -209,9 +195,9 @@ export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) =
         setIsSaving(false);
       }
     }
-  };
+  }
 
-  const applyBoardUpdate = (updater: (prev: BoardData) => BoardData) => {
+  function applyBoardUpdate(updater: (prev: BoardData) => BoardData) {
     setBoard((prev) => {
       const next = updater(prev);
       if (next === prev) {
@@ -223,13 +209,13 @@ export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) =
       void persistBoard(next, prev, mutationId);
       return next;
     });
-  };
+  }
 
-  const handleDragStart = (event: DragStartEvent) => {
+  function handleDragStart(event: DragStartEvent) {
     setActiveCardId(event.active.id as string);
-  };
+  }
 
-  const handleDragOver = (event: DragOverEvent) => {
+  function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) {
       return;
@@ -267,9 +253,9 @@ export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) =
         }),
       };
     });
-  };
+  }
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveCardId(null);
 
@@ -281,18 +267,18 @@ export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) =
       ...prev,
       columns: moveCard(prev.columns, active.id as string, over.id as string),
     }));
-  };
+  }
 
-  const handleRenameColumn = (columnId: string, title: string) => {
+  function handleRenameColumn(columnId: string, title: string) {
     applyBoardUpdate((prev) => ({
       ...prev,
       columns: prev.columns.map((column) =>
         column.id === columnId ? { ...column, title } : column
       ),
     }));
-  };
+  }
 
-  const handleAddCard = (columnId: string, title: string, details: string) => {
+  function handleAddCard(columnId: string, title: string, details: string) {
     const id = createId("card");
     applyBoardUpdate((prev) => ({
       ...prev,
@@ -306,9 +292,9 @@ export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) =
           : column
       ),
     }));
-  };
+  }
 
-  const handleDeleteCard = (columnId: string, cardId: string) => {
+  function handleDeleteCard(columnId: string, cardId: string) {
     applyBoardUpdate((prev) => ({
       ...prev,
       cards: Object.fromEntries(
@@ -323,9 +309,9 @@ export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) =
           : column
       ),
     }));
-  };
+  }
 
-  const activeCard = activeCardId ? cardsById[activeCardId] : null;
+  const activeCard = activeCardId ? board.cards[activeCardId] : null;
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -390,4 +376,4 @@ export const KanbanBoard = ({ rightSidebar, headerActions }: KanbanBoardProps) =
       {rightSidebar ?? null}
     </div>
   );
-};
+}

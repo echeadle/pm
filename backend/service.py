@@ -1,12 +1,12 @@
 import json
-from typing import Any, Dict
+from typing import Any
 
 import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Json
 
 
-DEFAULT_BOARD: Dict[str, Any] = {
+DEFAULT_BOARD: dict[str, Any] = {
     "version": 1,
     "board": {
         "columns": [
@@ -73,7 +73,7 @@ class KanbanService:
                 )
                 conn.commit()
 
-    def get_board(self, username: str) -> Dict[str, Any]:
+    def get_board(self, username: str) -> dict[str, Any]:
         with self._connect() as conn:
             row = conn.execute(
                 """
@@ -91,7 +91,7 @@ class KanbanService:
 
         return json.loads(row["board_json"])
 
-    def replace_board(self, username: str, board_payload: Dict[str, Any]) -> Dict[str, Any]:
+    def replace_board(self, username: str, board_payload: dict[str, Any]) -> dict[str, Any]:
         if board_payload.get("version") != 1:
             raise ValueError("Board payload version must be 1")
 
